@@ -65,10 +65,27 @@ ASGI_APPLICATION = 'lost_and_found.asgi.application'
 # Database
 DATABASES = {
     'default': dj_database_url.config(
-        default='sqlite:///db.sqlite3',
+        default='postgresql://postgres:postgres@localhost:5432/lost_and_found',
         conn_max_age=600,
-        conn_health_checks=True,
     )
+}
+
+# Update database config from environment variable if available
+DATABASE_URL = os.environ.get('DATABASE_URL')
+if DATABASE_URL:
+    DATABASES['default'] = dj_database_url.parse(DATABASE_URL)
+
+# Redis configuration
+REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+
+# Channels configuration
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [REDIS_URL],
+        },
+    },
 }
 
 # Password validation
@@ -114,16 +131,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGIN_REDIRECT_URL = 'home'
 LOGIN_URL = 'login'
 LOGOUT_REDIRECT_URL = 'login'
-
-# Channels configuration
-CHANNEL_LAYERS = {
-    'default': {
-        'BACKEND': 'channels_redis.core.RedisChannelLayer',
-        'CONFIG': {
-            "hosts": [os.environ.get('REDIS_URL', 'redis://localhost:6379/0')],
-        },
-    },
-}
 
 # Email settings (for password reset)
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
