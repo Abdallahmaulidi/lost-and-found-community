@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="dashboard-header">
+        <h1>Welcome, {{ user.username }}</h1>
+        <div class="header-actions">
+            <a href="{% url 'item-create' %}" class="form-button">Post New Item</a>
+            <a href="{% url 'profile' %}" class="form-button button-secondary">Edit Profile</a>
+        </div>
+    </div>
+
+    <div class="dashboard-section">
+        <h2>Your Items</h2>
+        <div class="items-grid">
+            {% for item in items %}
+                <article class="item-card">
+                    {% if item.image %}
+                        <img class="item-image" src="{{ item.image.url }}" alt="{{ item.title }}">
+                    {% endif %}
+                    <div class="item-content">
+                        <h3 class="item-title">{{ item.title }}</h3>
+                        <span class="item-status status-{{ item.status|lower }}">
+                            {{ item.get_status_display }}
+                        </span>
+                        <p class="item-location">{{ item.location }}</p>
+                        <p class="item-meta">
+                            Posted on {{ item.date_posted|date:"F d, Y" }}
+                        </p>
+                        <div class="item-actions">
+                            <a href="{% url 'item-detail' item.pk %}" class="form-button">View</a>
+                            <a href="{% url 'item-update' item.pk %}" class="form-button button-secondary">Edit</a>
+                        </div>
+                    </div>
+                </article>
+            {% empty %}
+                <p class="no-items">You haven't posted any items yet.</p>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="dashboard-section">
+        <h2>Recent Messages</h2>
+        <div class="conversations-list">
+            {% for conversation in conversations %}
+                <div class="conversation-card">
+                    <div class="conversation-header">
+                        <h3>{{ conversation.item.title }}</h3>
+                        <span class="conversation-time">{{ conversation.updated_at|timesince }} ago</span>
+                    </div>
+                    <div class="conversation-preview">
+                        {% with last_message=conversation.messages.last %}
+                            {% if last_message %}
+                                <p>{{ last_message.content|truncatechars:50 }}</p>
+                            {% else %}
+                                <p>No messages yet</p>
+                            {% endif %}
+                        {% endwith %}
+                    </div>
+                    <a href="{% url 'chat:conversation_detail' conversation.id %}" class="form-button">View Chat</a>
+                </div>
+            {% empty %}
+                <p class="no-messages">No conversations yet.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %} 

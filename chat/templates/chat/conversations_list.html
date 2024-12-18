@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="conversations-page">
+        <h1>Your Conversations</h1>
+        
+        <div class="conversations-grid">
+            {% for conversation in conversations %}
+                <div class="conversation-card">
+                    <div class="conversation-header">
+                        <h3>{{ conversation.item.title }}</h3>
+                        <span class="conversation-time">{{ conversation.updated_at|timesince }} ago</span>
+                    </div>
+                    
+                    <div class="conversation-participants">
+                        With: {% for participant in conversation.participants.all %}
+                                {% if participant != user %}
+                                    {{ participant.username }}
+                                {% endif %}
+                            {% endfor %}
+                    </div>
+                    
+                    <div class="conversation-preview">
+                        {% with last_message=conversation.messages.last %}
+                            {% if last_message %}
+                                <p>
+                                    <strong>{{ last_message.sender.username }}:</strong>
+                                    {{ last_message.content|truncatechars:100 }}
+                                </p>
+                                <span class="message-time">{{ last_message.created_at|timesince }} ago</span>
+                            {% else %}
+                                <p>No messages yet</p>
+                            {% endif %}
+                        {% endwith %}
+                    </div>
+                    
+                    <div class="conversation-actions">
+                        <a href="{% url 'chat:conversation_detail' conversation.id %}" class="form-button">View Conversation</a>
+                        <a href="{% url 'item-detail' conversation.item.id %}" class="form-button button-secondary">View Item</a>
+                    </div>
+                </div>
+            {% empty %}
+                <div class="no-conversations">
+                    <p>You don't have any conversations yet.</p>
+                    <p>Start a conversation by viewing an item and clicking "Contact Founder".</p>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<style>
+    .conversations-page {
+        padding: 2rem 0;
+    }
+
+    .conversations-page h1 {
+        margin-bottom: 2rem;
+    }
+
+    .conversations-grid {
+        display: grid;
+        gap: 1.5rem;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    }
+
+    .conversation-card {
+        background: white;
+        border-radius: 8px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .conversation-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1rem;
+    }
+
+    .conversation-header h3 {
+        margin: 0;
+        color: #333;
+    }
+
+    .conversation-time {
+        font-size: 0.875rem;
+        color: #666;
+    }
+
+    .conversation-participants {
+        font-size: 0.9rem;
+        color: #444;
+        margin-bottom: 1rem;
+    }
+
+    .conversation-preview {
+        padding: 1rem;
+        background: #f8f8f8;
+        border-radius: 4px;
+        margin-bottom: 1rem;
+    }
+
+    .conversation-preview p {
+        margin: 0;
+        color: #555;
+    }
+
+    .message-time {
+        display: block;
+        font-size: 0.8rem;
+        color: #777;
+        margin-top: 0.5rem;
+    }
+
+    .conversation-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .no-conversations {
+        grid-column: 1 / -1;
+        text-align: center;
+        padding: 3rem;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .no-conversations p:first-child {
+        font-size: 1.2rem;
+        color: #666;
+        margin-bottom: 1rem;
+    }
+
+    .no-conversations p:last-child {
+        color: #888;
+    }
+
+    @media (max-width: 768px) {
+        .conversations-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .conversation-actions {
+            flex-direction: column;
+        }
+
+        .conversation-actions .form-button {
+            width: 100%;
+            text-align: center;
+        }
+    }
+</style>
+{% endblock %} 

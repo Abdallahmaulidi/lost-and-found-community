@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="chat-page">
+    <div class="chat-sidebar">
+        <div class="conversations-list">
+            {% for conv in user.conversations.all %}
+                <div class="conversation-list-item {% if conv == conversation %}active{% endif %}">
+                    <a href="{% url 'chat:conversation_detail' conv.id %}">
+                        <h3>{{ conv.item.title }}</h3>
+                        <p class="conversation-preview">
+                            with {% for participant in conv.participants.all %}
+                                    {% if participant != user %}
+                                        {{ participant.username }}
+                                    {% endif %}
+                                {% endfor %}
+                        </p>
+                    </a>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="chat-main">
+        <div class="chat-header">
+            <div>
+                <h2>{{ conversation.item.title }}</h2>
+                <p>
+                    Chatting with {% for participant in conversation.participants.all %}
+                                    {% if participant != user %}
+                                        {{ participant.username }}
+                                    {% endif %}
+                                {% endfor %}
+                    {% if conversation.item.posted_by.is_online %}
+                        <span class="founder-status">Online</span>
+                    {% else %}
+                        <span class="founder-status offline">Offline</span>
+                    {% endif %}
+                </p>
+            </div>
+            <a href="{% url 'item-detail' conversation.item.id %}" class="form-button">View Item</a>
+        </div>
+
+        <div class="chat-messages" id="chatMessages">
+            {% for message in conversation.messages.all %}
+                <div class="chat-message {% if message.sender == user %}sent{% else %}received{% endif %}">
+                    <div class="message-content">{{ message.content }}</div>
+                    <div class="message-meta">
+                        <span class="message-sender">{{ message.sender.username }}</span>
+                        <span class="message-time">{{ message.created_at|date:"g:i A" }}</span>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+        <form method="POST" class="chat-input-form" id="messageForm">
+            {% csrf_token %}
+            <input type="text" name="content" id="messageInput" placeholder="Type your message..." required>
+            <button type="submit" class="form-button">Send</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    const chatSocket = new WebSocket(
+        'ws://' + window.location.host + '/ws/chat/{{ conversation.id }}/'
+    );
+
+    const chatMessages = document.getElementById('chatMessages');
+    const messageForm = document.getElementById('messageForm');
+    const messageInput = document.getElementById('messageInput');
+
+    // Handle incoming messages
+    chatSocket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        appendMessage(data.message, data.sender);
+        scrollToBottom();
+    };
+
+    // Handle form submission
+    messageForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const message = messageInput.value.trim();
+        
+        if (message) {
+            // Send via WebSocket
+            chatSocket.send(JSON.stringify({
+                'message': message
+            }));
+
+            // Also send via HTTP POST
+            try {
+                const response = await fetch(window.location.href, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: `content=${encodeURIComponent(message)}`
+                });
+
+                if (response.ok) {
+                    // Add message to chat immediately
+                    appendMessage(message, '{{ user.username }}');
+                    messageInput.value = '';
+                    scrollToBottom();
+                }
+            } catch (error) {
+                console.error('Error sending message:', error);
+            }
+        }
+    });
+
+    function appendMessage(message, sender) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `chat-message ${sender === '{{ user.username }}' ? 'sent' : 'received'}`;
+        
+        const currentTime = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+        
+        messageDiv.innerHTML = `
+            <div class="message-content">${message}</div>
+            <div class="message-meta">
+                <span class="message-sender">${sender}</span>
+                <span class="message-time">${currentTime}</span>
+            </div>
+        `;
+        
+        chatMessages.appendChild(messageDiv);
+    }
+
+    function scrollToBottom() {
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    // Initial scroll to bottom
+    scrollToBottom();
+
+    // Handle WebSocket connection errors
+    chatSocket.onerror = function(error) {
+        console.error('WebSocket Error:', error);
+    };
+
+    chatSocket.onclose = function(e) {
+        console.log('Chat socket closed unexpectedly');
+    };
+</script>
+{% endblock %} 

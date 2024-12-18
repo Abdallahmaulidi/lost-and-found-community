@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <article class="item-detail">
+        <div class="item-header">
+            <h1>{{ object.title }}</h1>
+            <span class="item-status status-{{ object.status|lower }}">
+                {{ object.get_status_display }}
+            </span>
+        </div>
+        
+        <img class="item-detail-image" src="{{ object.image.url }}" alt="{{ object.title }}">
+        
+        <div class="item-info">
+            <p class="item-description">{{ object.description }}</p>
+            <p class="item-location">Location: {{ object.location }}</p>
+            <p class="item-meta">
+                Posted by {{ object.posted_by }} on {{ object.date_posted|date:"F d, Y" }}
+            </p>
+
+            {% if object.status == 'LOST' and object.award_amount %}
+                <div class="award-info">
+                    <h3>Reward Offered</h3>
+                    <p class="award-amount">${{ object.award_amount }}</p>
+                    {% if object.award_description %}
+                        <p class="award-description">{{ object.award_description }}</p>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="item-actions">
+            {% if object.posted_by == user %}
+                <a href="{% url 'item-update' object.pk %}" class="form-button">Update</a>
+                <a href="{% url 'item-delete' object.pk %}" class="form-button delete-button">Delete</a>
+            {% else %}
+                <button class="form-button" onclick="openContactForm()">Contact Founder</button>
+            {% endif %}
+        </div>
+    </article>
+
+    <!-- Contact Form Modal -->
+    <div id="contactModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeContactForm()">&times;</span>
+            <h2>Contact Item Founder</h2>
+            <form id="initialMessageForm" class="contact-form">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label class="form-label">Your Message to Founder:</label>
+                    <textarea class="form-input" name="message" rows="4" required 
+                              placeholder="Describe why you're contacting about this item..."></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="form-button">Send Message</button>
+                    <button type="button" class="form-button button-secondary" onclick="closeContactForm()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function openContactForm() {
+        document.getElementById('contactModal').style.display = 'block';
+    }
+
+    function closeContactForm() {
+        document.getElementById('contactModal').style.display = 'none';
+    }
+
+    document.getElementById('initialMessageForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const message = this.message.value;
+        
+        fetch('{% url "chat:start_conversation" object.pk %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({ message: message })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.location.href = data.chat_url;
+            } else {
+                alert('Failed to send message. Please try again.');
+            }
+        });
+    });
+
+    // Close modal when clicking outside
+    window.onclick = function(event) {
+        if (event.target == document.getElementById('contactModal')) {
+            closeContactForm();
+        }
+    }
+</script>
+{% endblock %} 

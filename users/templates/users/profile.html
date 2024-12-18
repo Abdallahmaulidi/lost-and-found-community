@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="form">
+    <div class="profile-header">
+        {% if user.profile.image %}
+            <img class="profile-image" src="{{ user.profile.image.url }}" alt="{{ user.username }}">
+        {% else %}
+            <div class="profile-image-placeholder">
+                {{ user.username|make_list|first|upper }}
+            </div>
+        {% endif %}
+        <div class="profile-info">
+            <h2>{{ user.username }}</h2>
+            <p>{{ user.email }}</p>
+            {% if user.profile.phone %}
+                <p>{{ user.profile.phone }}</p>
+            {% endif %}
+            {% if user.profile.address %}
+                <p>{{ user.profile.address }}</p>
+            {% endif %}
+        </div>
+    </div>
+    
+    <form method="POST" enctype="multipart/form-data" class="profile-form">
+        {% csrf_token %}
+        <h3>Update Profile</h3>
+        
+        <!-- User Form -->
+        <div class="form-section">
+            <h4>Account Information</h4>
+            {% for field in u_form %}
+                <div class="form-group">
+                    <label class="form-label">{{ field.label }}</label>
+                    {% if field.errors %}
+                        {% for error in field.errors %}
+                            <div class="message message-error">{{ error }}</div>
+                        {% endfor %}
+                    {% endif %}
+                    {{ field }}
+                    {% if field.help_text %}
+                        <small class="form-help-text">{{ field.help_text }}</small>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Profile Form -->
+        <div class="form-section">
+            <h4>Profile Information</h4>
+            {% for field in p_form %}
+                <div class="form-group">
+                    <label class="form-label">{{ field.label }}</label>
+                    {% if field.errors %}
+                        {% for error in field.errors %}
+                            <div class="message message-error">{{ error }}</div>
+                        {% endfor %}
+                    {% endif %}
+                    {{ field }}
+                    {% if field.help_text %}
+                        <small class="form-help-text">{{ field.help_text }}</small>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="form-button">Update Profile</button>
+            <a href="{% url 'home' %}" class="form-button button-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %} 

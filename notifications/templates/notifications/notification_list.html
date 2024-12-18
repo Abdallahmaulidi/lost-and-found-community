@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="notifications-page">
+        <h1>Notifications</h1>
+        
+        <div class="notifications-list">
+            {% for notification in notifications %}
+                <div class="notification-item {% if not notification.read %}unread{% endif %}"
+                     data-id="{{ notification.id }}">
+                    <div class="notification-content">
+                        {% if notification.item %}
+                            <a href="{% url 'item-detail' notification.item.id %}" class="notification-link">
+                                {{ notification.message }}
+                            </a>
+                        {% else %}
+                            {{ notification.message }}
+                        {% endif %}
+                    </div>
+                    <div class="notification-meta">
+                        <span class="notification-time">{{ notification.created_at|timesince }} ago</span>
+                        {% if not notification.read %}
+                            <button class="mark-read-btn">Mark as read</button>
+                        {% endif %}
+                    </div>
+                </div>
+            {% empty %}
+                <p>No notifications yet.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<script>
+    document.querySelectorAll('.mark-read-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const notificationItem = this.closest('.notification-item');
+            const notificationId = notificationItem.dataset.id;
+            
+            fetch(`/notifications/mark-read/${notificationId}/`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        notificationItem.classList.remove('unread');
+                        this.remove();
+                    }
+                });
+        });
+    });
+</script>
+{% endblock %} 

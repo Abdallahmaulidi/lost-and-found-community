@@ -1,0 +1,153 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Lost and Found{% endblock %}</title>
+    <link href="{% static 'css/style.css' %}" rel="stylesheet">
+</head>
+<body>
+    <nav class="nav">
+        <div class="nav-container">
+            <a class="nav-brand" href="{% url 'home' %}">Lost and Found</a>
+            <div class="nav-links">
+                {% if user.is_authenticated %}
+                    <a href="{% url 'notifications:list' %}" class="nav-link" id="notificationBtn">
+                        Notifications 
+                        <span id="notificationCount" class="notification-badge">0</span>
+                    </a>
+                    <a href="{% url 'chat:conversations_list' %}" class="nav-link" id="messageBtn">
+                        Messages
+                        <span id="messageCount" class="notification-badge">0</span>
+                    </a>
+                    <a class="nav-link" href="{% url 'dashboard' %}">Dashboard</a>
+                    <a class="nav-link" href="{% url 'profile' %}">Profile</a>
+                    <a class="nav-link" href="{% url 'logout' %}" onclick="return confirm('Are you sure you want to log out?')">Logout</a>
+                {% else %}
+                    <a class="nav-link" href="{% url 'login' %}">Login</a>
+                    <a class="nav-link" href="{% url 'register' %}">Register</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <main class="container">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="message message-{{ message.tags }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+        {% block content %}{% endblock %}
+    </main>
+
+    {% if user.is_authenticated %}
+        <div id="chatContainer" class="chat-container">
+            <div class="chat-header">
+                <span>Messages</span>
+                <button id="toggleChat" class="chat-toggle">▼</button>
+            </div>
+            <div id="chatContent" class="chat-content">
+                <div id="conversationsList" class="conversations-list"></div>
+            </div>
+        </div>
+    {% endif %}
+
+    <script src="{% static 'js/notification-manager.js' %}"></script>
+    <script src="{% static 'js/notification-sound.js' %}"></script>
+    <script>
+        {% if user.is_authenticated %}
+            // Initialize notifications
+            NotificationManager.initialize();
+
+            // Update the existing WebSocket code
+            const notificationSocket = new WebSocket(
+                'ws://' + window.location.host + '/ws/notifications/'
+            );
+
+            notificationSocket.onmessage = function(e) {
+                const data = JSON.parse(e.data);
+                if (data.type === 'notification') {
+                    updateNotificationCount();
+                }
+            };
+
+            // Add function to load initial notifications
+            async function loadInitialNotifications() {
+                try {
+                    const response = await fetch('/notifications/unread/');
+                    const data = await response.json();
+                    updateNotificationCount();
+                } catch (error) {
+                    console.error('Error loading notifications:', error);
+                }
+            }
+
+            // Load notifications when page loads
+            loadInitialNotifications();
+
+            // Function to update notification count
+            async function updateNotificationCount() {
+                try {
+                    const response = await fetch('/notifications/unread-count/');
+                    const data = await response.json();
+                    const notificationCount = document.getElementById('notificationCount');
+                    notificationCount.textContent = data.count;
+                    notificationCount.style.display = data.count > 0 ? 'inline-block' : 'none';
+                } catch (error) {
+                    console.error('Error updating notification count:', error);
+                }
+            }
+
+            // Function to update message count
+            async function updateMessageCount() {
+                try {
+                    const response = await fetch('/chat/unread-count/');
+                    const data = await response.json();
+                    const messageCount = document.getElementById('messageCount');
+                    messageCount.textContent = data.count;
+                    messageCount.style.display = data.count > 0 ? 'inline-block' : 'none';
+                } catch (error) {
+                    console.error('Error updating message count:', error);
+                }
+            }
+
+            // Update message count every 30 seconds
+            updateMessageCount();
+            setInterval(updateMessageCount, 30000);
+
+            // Chat functionality
+            const chatToggle = document.getElementById('toggleChat');
+            const chatContent = document.getElementById('chatContent');
+
+            chatToggle.addEventListener('click', function() {
+                chatContent.classList.toggle('show');
+                this.textContent = chatContent.classList.contains('show') ? '▼' : '▲';
+            });
+
+            function initializeChat(conversationId) {
+                const chatSocket = new WebSocket(
+                    'ws://' + window.location.host + '/ws/chat/' + conversationId + '/'
+                );
+
+                chatSocket.onmessage = function(e) {
+                    const data = JSON.parse(e.data);
+                    appendMessage(data.message, data.sender);
+                    updateMessageCount(); // Update message count when new message arrives
+                };
+
+                return chatSocket;
+            }
+
+            function appendMessage(message, sender) {
+                const messageElement = document.createElement('div');
+                messageElement.className = 'chat-message';
+                messageElement.textContent = `${sender}: ${message}`;
+                document.getElementById('chatMessages').appendChild(messageElement);
+            }
+        {% endif %}
+    </script>
+</body>
+</html> 
